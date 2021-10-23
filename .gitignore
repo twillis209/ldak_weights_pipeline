@@ -1,0 +1,3 @@
+.snakemake
+resources
+submit_with_scheduling.sh
