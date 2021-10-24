@@ -11,17 +11,18 @@ args <- parser$parse_args()
 
 setDTthreads(threads=args$no_of_threads)
 
-bim_dat <- fread(args$bim_file, sep = '\t', header = F, col.names = c('Chr', 'ID', 'Cm', 'BP19', 'A1', 'A2'))
+bim_dat <- fread(args$bim_file, sep = '\t', header = F, col.names = c('Chr', 'ID', 'Cm', 'BP38', 'A1', 'A2'))
 
 weights_dat <- fread(args$weights_file, sep = ' ', header = T)
 
 # Drop rows with NA values
 weights_dat <- na.omit(weights_dat, cols = c('Predictor', 'Weight'))
+#weights_dat[, c('Chr', 'BP38', 'Aa', 'Ab') := tstrsplit(Predictor, ':')]
 
-join_dat <- merge(weights_dat, bim_dat[, .(ID, Chr, BP19, A1, A2)], all.x = T, by.x = c('Predictor', 'Chr'), by.y = c('ID', 'Chr'), sort = F)
+join_dat <- merge(weights_dat, bim_dat[, .(ID, Chr, BP38, A1, A2)], all.x = T, by.x = 'Predictor', by.y = 'ID', sort = F)
 
 # Check that we have not lost any SNPs
-if(any(is.na(join_dat$BP19))) {
+if(any(is.na(join_dat$BP38))) {
   stop("Failed to match at least one SNP in weights file for %s")
 }
 

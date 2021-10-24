@@ -163,7 +163,10 @@ rule combine_weights:
      output:
       "results/{imd_a}_{imd_b}/ldak/combined_weights.all"
      shell:
-      "for x in {input}; do cat $x >>{output}; done"
+      """
+      echo -e "Predictor Weight Neighbours Tagging Info Check" >>{output}
+      for x in {input}; do tail -n +2 $x >>{output}; done
+      """
 
 rule combine_bim_files:
      input:
@@ -171,7 +174,7 @@ rule combine_bim_files:
      output:
       "resources/gwas/{imd_a}_{imd_b}/plink/chr_all.bim"
      shell:
-      "for x in {input}; do cat x >>{output}; done"
+      "for x in {input}; do cat $x >>{output}; done"
 
 rule add_bp_alleles_to_combined_weights:
      input:
@@ -179,5 +182,6 @@ rule add_bp_alleles_to_combined_weights:
       weights_file = "results/{imd_a}_{imd_b}/ldak/combined_weights.all"
      output:
       "results/{imd_a}_{imd_b}/ldak/combined_weights_meta.all"
+     threads: 4
      shell:
       "Rscript scripts/add_bp_alleles_to_combined_weights.R -bf {input.bim_file} -wf {input.weights_file} -of {output} -nt {threads}"
