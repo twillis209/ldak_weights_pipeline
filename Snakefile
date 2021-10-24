@@ -185,3 +185,13 @@ rule add_bp_alleles_to_combined_weights:
      threads: 4
      shell:
       "Rscript scripts/add_bp_alleles_to_combined_weights.R -bf {input.bim_file} -wf {input.weights_file} -of {output} -nt {threads}"
+
+rule join_gwas_and_weights:
+    input:
+     weights_file = "results/{imd_a}_{imd_b}/ldak/combined_weights_meta.all",
+     merged_gwas_file = "resources/gwas/{imd_a}_{imd_b}/{imd_a}_{imd_b}.tsv.gz"
+    output:
+     "results/{imd_a}_{imd_b}/gwas/{imd_a}_{imd_b}_with_weights.tsv.gz"
+    threads: 4
+    shell:
+     "Rscript scripts/join_gwas_and_weights.R -gf {input.merged_gwas_file} -wf {input.weights_file} -chr_g CHR38 -chr_w Chr -bp_g BP38 -bp_w BP38 -ref_g REF -ref_w A1 -alt_g ALT -alt_w A2 -of {output} -nt {threads}"

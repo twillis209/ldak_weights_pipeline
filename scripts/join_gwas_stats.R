@@ -1,8 +1,6 @@
 library(data.table)
 library(argparse)
 
-PID_ROOT <- Sys.getenv('pidRoot')
-
 parser <- ArgumentParser(description = 'Join summary statistics in pair of GWAS files')
 parser$add_argument('-a', '--input_file_a', type = 'character', help = 'Path to GWAS summary statistics file for trait A')
 parser$add_argument('-b', '--input_file_b', type = 'character', help = 'Path to GWAS summary statistics file for trait B')
