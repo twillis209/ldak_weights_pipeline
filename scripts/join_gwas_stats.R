@@ -14,6 +14,8 @@ parser$add_argument('-alt_a', type = 'character', help = 'Label of alternative a
 parser$add_argument('-alt_b', type = 'character', help = 'Label of alternative allele column in input file B')
 parser$add_argument('-p_a', type = 'character', help = 'Label of p-value column in input file A')
 parser$add_argument('-p_b', type = 'character', help = 'Label of p-value column in input file B')
+parser$add_argument('-ac_a', '--add_columns_a', type = 'character', help = 'Comma-delimited list of additional columns to retain from trait A\'s GWAS file')
+parser$add_argument('-ac_b', '--add_columns_b', type = 'character', help = 'Comma-delimited list of additional columns to retain from trait B\'s GWAS file')
 parser$add_argument('-o', '--output_path', type = 'character', help = 'Path to output file', required = T)
 parser$add_argument('-nt', '--no_of_threads', type = 'integer', help = 'Number of threads to use', default = 1)
 
@@ -21,8 +23,11 @@ args <- parser$parse_args()
 
 setDTthreads(args$no_of_threads)
 
-dat_a <- fread(args$input_file_a, sep = '\t', header = T, select = c(args$chr_a, args$bp_a, args$ref_a, args$alt_a, args$p_a))
-dat_b <- fread(args$input_file_b, sep = '\t', header = T, select = c(args$chr_b, args$bp_b, args$ref_b, args$alt_b, args$p_b))
+args$add_columns_a <- unlist(strsplit(args$add_columns_a, ","))
+args$add_columns_b <- unlist(strsplit(args$add_columns_b, ","))
+
+dat_a <- fread(args$input_file_a, sep = '\t', header = T, select = c(args$chr_a, args$bp_a, args$ref_a, args$alt_a, args$p_a, args$add_columns_a))
+dat_b <- fread(args$input_file_b, sep = '\t', header = T, select = c(args$chr_b, args$bp_b, args$ref_b, args$alt_b, args$p_b, args$add_columns_b))
 
 dat_a[ , c(args$ref_a, args$alt_a) := list(toupper(get(args$ref_a)), toupper(get(args$alt_a)))]
 dat_a <- dat_a[get(args$ref_a) %in% c('A','T','C','G') & get(args$alt_a) %in% c('A','T','C','G')]

@@ -1,3 +1,5 @@
+configfile: 'config.yaml'
+
 wildcard_constraints:
   chr = "chr[0-9X]{1,2}"
 
@@ -6,14 +8,28 @@ def get_mem_mb(wildcards, threads):
 
 CHROMS = ["chr%d" % i for i in range(1,23)]
 
+if not(config["reference"] in ["hg38", "hg19"]):
+    raise Exception("Invalid \"reference\" value: %s" % config["reference"])
+
+if config["reference"] == "hg38":
+    bp_label = "BP38"
+elif config["reference"] == "hg19":
+    bp_label = "BP19"
+
 rule download_1000g_genotype_data:
      output:
       "resources/1000g/{chr}.vcf.gz"
      run:
-      if wildcards.chr == 'chrX':
-         shell("wget -O resources/1000g/{wildcards.chr}.vcf.gz http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000G_2504_high_coverage/working/20201028_3202_phased/CCDG_14151_B01_GRM_WGS_2020-08-05_chrX.filtered.eagle2-phased.v2.vcf.gz")
-      else:
-        shell("wget -O resources/1000g/{wildcards.chr}.vcf.gz http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000G_2504_high_coverage/working/20201028_3202_phased/CCDG_14151_B01_GRM_WGS_2020-08-05_{wildcards.chr}.filtered.shapeit2-duohmm-phased.vcf.gz")
+        if config["reference"] == "hg38":
+            if wildcards.chr == 'chrX':
+                shell("wget -O resources/1000g/{wildcards.chr}.vcf.gz http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000G_2504_high_coverage/working/20201028_3202_phased/CCDG_14151_B01_GRM_WGS_2020-08-05_chrX.filtered.eagle2-phased.v2.vcf.gz")
+            else:
+                shell("wget -O resources/1000g/{wildcards.chr}.vcf.gz http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000G_2504_high_coverage/working/20201028_3202_phased/CCDG_14151_B01_GRM_WGS_2020-08-05_{wildcards.chr}.filtered.shapeit2-duohmm-phased.vcf.gz")
+        elif config["reference"] == "hg19":
+            if wildcards.chr == 'chrX':
+                shell("wget -O resources/1000g/{wildcards.chr}.vcf.gz http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.chrX.phase3_shapeit2_mvncall_integrated_v1b.20130502.genotypes.vcf.gz")
+            else:
+                shell("wget -O resources/1000g/{wildcards.chr}.vcf.gz http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.{wildcards.chr}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz")
 
 rule download_1000g_sample_metadata:
      output:
@@ -73,6 +89,16 @@ rule qc:
      shell:
       "plink --memory {resources.mem_mb} --threads {threads} --bfile resources/1000g/euro/{wildcards.chr}_euro --geno 0.1 --mind 0.1 --maf 0.005 --hwe 1e-50 --make-bed --silent --out resources/1000g/euro/qc/{wildcards.chr}_qc"
 
+rule combine_qc_bim_files:
+    input:
+        ["resources/1000g/euro/qc/%s_qc.bim" % x for x in CHROMS]
+    output:
+        "resources/1000g/euro/qc/chr_all.bim"
+    shell:
+        """
+        for x in {input}; do cat $x >>{output}; done
+        """
+
 rule maf:
     input:
         "resources/1000g/euro/qc/{chr}_qc.bed",
@@ -85,6 +111,29 @@ rule maf:
         mem_mb=get_mem_mb
     shell:
         "plink --memory {resources.mem_mb} --threads {threads} --bfile resources/1000g/euro/qc/{wildcards.chr}_qc --freq --out resources/1000g/euro/qc/maf/{wildcards.chr}"
+
+rule combine_maf_files:
+    input:
+        ["resources/1000g/euro/qc/maf/%s.frq" % x for x in CHROMS]
+    output:
+        "resources/1000g/euro/qc/maf/chr_all.frq"
+    shell:
+        """
+        echo -e "CHR SNP A1 A2 MAF NCHROBS" >>{output}
+        for x in {input}; do tail -n +2 $x >>{output}; done
+        """
+
+rule add_bp_to_maf_file:
+    input:
+        maf_file = "resources/1000g/euro/qc/maf/chr_all.frq",
+        bim_file = "resources/1000g/euro/qc/chr_all.bim"
+    output:
+        "resources/1000g/euro/qc/maf/chr_all_bp.frq"
+    threads: 4
+    resources:
+        mem_mb=get_mem_mb
+    shell:
+        "Rscript scripts/add_bp_to_maf_file.R -mf {input.maf_file} -bf {input.bim_file} -chr_m CHR -chr_b Chr -bp_b BP38 -ref_m A1 -alt_m A2 -ref_b A1 -alt_b A2 -id_m SNP -id_b ID -maf MAF -of {output} -nt {threads}"
 
 rule join_gwas:
      input:
@@ -168,7 +217,7 @@ rule combine_weights:
       for x in {input}; do tail -n +2 $x >>{output}; done
       """
 
-rule combine_bim_files:
+rule combine_subsetted_bim_files:
      input:
       ["resources/gwas/{imd_a}_{imd_b}/plink/%s.bim" % x for x in CHROMS]
      output:
@@ -195,3 +244,13 @@ rule join_gwas_and_weights:
     threads: 4
     shell:
      "Rscript scripts/join_gwas_and_weights.R -gf {input.merged_gwas_file} -wf {input.weights_file} -chr_g CHR38 -chr_w Chr -bp_g BP38 -bp_w BP38 -ref_g REF -ref_w A1 -alt_g ALT -alt_w A2 -of {output} -nt {threads}"
+
+rule join_maf_to_gwas_and_weights:
+    input:
+     merged_gwas_file = "results/{imd_a}_{imd_b}/gwas/{imd_a}_{imd_b}_with_weights.tsv.gz",
+     maf_file = "resources/1000g/euro/qc/maf/chr_all_bp.frq"
+    output:
+     "results/{imd_a}_{imd_b}/gwas/{imd_a}_{imd_b}_with_weights_and_maf.tsv.gz"
+    threads: 4
+    shell:
+        "Rscript scripts/join_maf_to_gwas_and_weights.R -gf {input.merged_gwas_file} -mf {input.maf_file} -chr_g CHR38 -chr_m CHR -bp_g BP38 -bp_m BP38 -ref_g REF -ref_m A1 -alt_g ALT -alt_m A2 -maf MAF -o {output} -nt {threads}"
