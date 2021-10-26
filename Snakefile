@@ -133,7 +133,7 @@ rule add_bp_to_maf_file:
     resources:
         mem_mb=get_mem_mb
     shell:
-        f"Rscript scripts/add_bp_to_maf_file.R -mf {{input.maf_file}} -bf {{input.bim_file}} -chr_m CHR -chr_b Chr -bp_b {kg_bp_label} -ref_m A1 -alt_m A2 -ref_b A1 -alt_b A2 -id_m SNP -id_b ID -maf MAF -of {{output}} -nt {{threads}}"
+        "Rscript scripts/add_bp_to_maf_file.R -mf {input.maf_file} -bf {input.bim_file} -chr_m CHR -chr_b Chr -bp_b {kg_bp_label} -ref_m A1 -alt_m A2 -ref_b A1 -alt_b A2 -id_m SNP -id_b ID -maf MAF -of {output} -nt {threads}"
 
 rule join_gwas:
      input:
@@ -143,7 +143,7 @@ rule join_gwas:
       AB = "resources/gwas/{imd_a}_{imd_b}/{imd_a}_{imd_b}.tsv.gz"
      threads: 8
      shell:
-         f"Rscript scripts/join_gwas_stats.R -a {{input.A}} -b {{input.B}} -chr_a {config[gwas_chr_label]} -chr_b {config[gwas_chr_label]} -bp_a {config[gwas_bp_label]} -bp_b {config[gwas_bp_label]} -ref_a {config[gwas_ref_label]} -ref_b {config[gwas_ref_label]} -alt_a {config[gwas_alt_label]} -alt_b {config[gwas_alt_label]} -p_a {config[gwas_pvalue_label]} -p_b {config[gwas_pvalue_label]} -o {{output.AB}} -nt {{threads}}"
+         "Rscript scripts/join_gwas_stats.R -a {input.A} -b {input.B} -chr_a {config[gwas_chr_label]} -chr_b {config[gwas_chr_label]} -bp_a {config[gwas_bp_label]} -bp_b {config[gwas_bp_label]} -ref_a {config[gwas_ref_label]} -ref_b {config[gwas_ref_label]} -alt_a {config[gwas_alt_label]} -alt_b {config[gwas_alt_label]} -p_a {config[gwas_pvalue_label]} -p_b {config[gwas_pvalue_label]} -o {output.AB} -nt {threads}"
 
 rule make_plink_ranges:
      input:
@@ -156,7 +156,7 @@ rule make_plink_ranges:
       output_dir = "resources/gwas/{imd_a}_{imd_b}/matching_ids"
      threads: 2
      shell:
-      f"Rscript scripts/make_plink_ranges.R -i {{input.gwas_file}} -b {{params.input_dir}} -r chr%d_qc.bim -chr {config[gwas_chr_label]} -bp {config[gwas_bp_label]} -ref {config[gwas_ref_label]} -alt {config[gwas_alt_label]} -prin {config[gwas_prin_pvalue_label]} -aux {config[gwas_aux_pvalue_label]} -o {{params.output_dir}} -nt {{threads}}"
+      "Rscript scripts/make_plink_ranges.R -i {input.gwas_file} -b {params.input_dir} -r chr%d_qc.bim -chr {config[gwas_chr_label]} -bp {config[gwas_bp_label]} -ref {config[gwas_ref_label]} -alt {config[gwas_alt_label]} -prin {config[gwas_prin_pvalue_label]} -aux {config[gwas_aux_pvalue_label]} -o {params.output_dir} -nt {threads}"
 
 rule subset_reference:
      input:
@@ -243,7 +243,7 @@ rule join_gwas_and_weights:
      "results/{imd_a}_{imd_b}/gwas/{imd_a}_{imd_b}_with_weights.tsv.gz"
     threads: 4
     shell:
-        f"Rscript scripts/join_gwas_and_weights.R -gf {{input.merged_gwas_file}} -wf {{input.weights_file}} -chr_g {config[gwas_chr_label]} -chr_w Chr -bp_g {config[gwas_chr_label]} -bp_w {kg_bp_label} -ref_g {config[gwas_ref_label]} -ref_w A1 -alt_g {config[gwas_alt_label]} -alt_w A2 -of {{output}} -nt {{threads}}"
+        "Rscript scripts/join_gwas_and_weights.R -gf {input.merged_gwas_file} -wf {input.weights_file} -chr_g {config[gwas_chr_label]} -chr_w Chr -bp_g {config[gwas_chr_label]} -bp_w {kg_bp_label} -ref_g {config[gwas_ref_label]} -ref_w A1 -alt_g {config[gwas_alt_label]} -alt_w A2 -of {output} -nt {threads}"
 
 rule join_maf_to_gwas_and_weights:
     input:
@@ -253,4 +253,4 @@ rule join_maf_to_gwas_and_weights:
      "results/{imd_a}_{imd_b}/gwas/{imd_a}_{imd_b}_with_weights_and_maf.tsv.gz"
     threads: 4
     shell:
-        f"Rscript scripts/join_maf_to_gwas_and_weights.R -gf {{input.merged_gwas_file}} -mf {{input.maf_file}} -chr_g {config[gwas_chr_label]} -chr_m CHR -bp_g {config[gwas_bp_label]} -bp_m {kg_bp_label} -ref_g {config[gwas_ref_label]} -ref_m A1 -alt_g {config[gwas_alt_label]} -alt_m A2 -maf MAF -o {{output}} -nt {{threads}}"
+        "Rscript scripts/join_maf_to_gwas_and_weights.R -gf {input.merged_gwas_file} -mf {input.maf_file} -chr_g {config[gwas_chr_label]} -chr_m CHR -bp_g {config[gwas_bp_label]} -bp_m {kg_bp_label} -ref_g {config[gwas_ref_label]} -ref_m A1 -alt_g {config[gwas_alt_label]} -alt_m A2 -maf MAF -o {output} -nt {threads}"
