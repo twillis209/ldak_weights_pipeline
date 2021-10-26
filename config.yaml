@@ -1,1 +1,8 @@
 reference: "hg38"
+gwas_chr_label: "CHR38"
+gwas_bp_label: "BP38"
+gwas_ref_label: "REF"
+gwas_alt_label: "ALT"
+gwas_pvalue_label: "P"
+gwas_prin_pvalue_label: "P.A"
+gwas_aux_pvalue_label: "P.B"

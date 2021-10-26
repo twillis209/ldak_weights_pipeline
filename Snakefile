@@ -12,9 +12,9 @@ if not(config["reference"] in ["hg38", "hg19"]):
     raise Exception("Invalid \"reference\" value: %s" % config["reference"])
 
 if config["reference"] == "hg38":
-    bp_label = "BP38"
-elif config["reference"] == "hg19":
-    bp_label = "BP19"
+    kg_bp_label = "BP38"
+else:
+    kg_bp_label = "BP19"
 
 rule download_1000g_genotype_data:
      output:
@@ -25,7 +25,7 @@ rule download_1000g_genotype_data:
                 shell("wget -O resources/1000g/{wildcards.chr}.vcf.gz http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000G_2504_high_coverage/working/20201028_3202_phased/CCDG_14151_B01_GRM_WGS_2020-08-05_chrX.filtered.eagle2-phased.v2.vcf.gz")
             else:
                 shell("wget -O resources/1000g/{wildcards.chr}.vcf.gz http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000G_2504_high_coverage/working/20201028_3202_phased/CCDG_14151_B01_GRM_WGS_2020-08-05_{wildcards.chr}.filtered.shapeit2-duohmm-phased.vcf.gz")
-        elif config["reference"] == "hg19":
+        else:
             if wildcards.chr == 'chrX':
                 shell("wget -O resources/1000g/{wildcards.chr}.vcf.gz http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.chrX.phase3_shapeit2_mvncall_integrated_v1b.20130502.genotypes.vcf.gz")
             else:
@@ -133,7 +133,7 @@ rule add_bp_to_maf_file:
     resources:
         mem_mb=get_mem_mb
     shell:
-        "Rscript scripts/add_bp_to_maf_file.R -mf {input.maf_file} -bf {input.bim_file} -chr_m CHR -chr_b Chr -bp_b BP38 -ref_m A1 -alt_m A2 -ref_b A1 -alt_b A2 -id_m SNP -id_b ID -maf MAF -of {output} -nt {threads}"
+        f"Rscript scripts/add_bp_to_maf_file.R -mf {{input.maf_file}} -bf {{input.bim_file}} -chr_m CHR -chr_b Chr -bp_b {kg_bp_label} -ref_m A1 -alt_m A2 -ref_b A1 -alt_b A2 -id_m SNP -id_b ID -maf MAF -of {{output}} -nt {{threads}}"
 
 rule join_gwas:
      input:
@@ -143,7 +143,7 @@ rule join_gwas:
       AB = "resources/gwas/{imd_a}_{imd_b}/{imd_a}_{imd_b}.tsv.gz"
      threads: 8
      shell:
-      "Rscript scripts/join_gwas_stats.R -a {input.A} -b {input.B} -chr_a CHR38 -chr_b CHR38 -bp_a BP38 -bp_b BP38 -ref_a REF -ref_b REF -alt_a ALT -alt_b ALT -p_a P -p_b P -o {output.AB} -nt {threads}"
+         f"Rscript scripts/join_gwas_stats.R -a {{input.A}} -b {{input.B}} -chr_a {config[gwas_chr_label]} -chr_b {config[gwas_chr_label]} -bp_a {config[gwas_bp_label]} -bp_b {config[gwas_bp_label]} -ref_a {config[gwas_ref_label]} -ref_b {config[gwas_ref_label]} -alt_a {config[gwas_alt_label]} -alt_b {config[gwas_alt_label]} -p_a {config[gwas_pvalue_label]} -p_b {config[gwas_pvalue_label]} -o {{output.AB}} -nt {{threads}}"
 
 rule make_plink_ranges:
      input:
@@ -156,7 +156,7 @@ rule make_plink_ranges:
       output_dir = "resources/gwas/{imd_a}_{imd_b}/matching_ids"
      threads: 2
      shell:
-      "Rscript scripts/make_plink_ranges.R -i {input.gwas_file} -b {params.input_dir} -r chr%d_qc.bim -chr CHR38 -bp BP38 -ref REF -alt ALT -prin P.A -aux P.B -o {params.output_dir} -nt {threads}"
+      f"Rscript scripts/make_plink_ranges.R -i {{input.gwas_file}} -b {{params.input_dir}} -r chr%d_qc.bim -chr {config[gwas_chr_label]} -bp {config[gwas_bp_label]} -ref {config[gwas_ref_label]} -alt {config[gwas_alt_label]} -prin {config[gwas_prin_pvalue_label]} -aux {config[gwas_aux_pvalue_label]} -o {{params.output_dir}} -nt {{threads}}"
 
 rule subset_reference:
      input:
@@ -243,7 +243,7 @@ rule join_gwas_and_weights:
      "results/{imd_a}_{imd_b}/gwas/{imd_a}_{imd_b}_with_weights.tsv.gz"
     threads: 4
     shell:
-     "Rscript scripts/join_gwas_and_weights.R -gf {input.merged_gwas_file} -wf {input.weights_file} -chr_g CHR38 -chr_w Chr -bp_g BP38 -bp_w BP38 -ref_g REF -ref_w A1 -alt_g ALT -alt_w A2 -of {output} -nt {threads}"
+        f"Rscript scripts/join_gwas_and_weights.R -gf {{input.merged_gwas_file}} -wf {{input.weights_file}} -chr_g {config[gwas_chr_label]} -chr_w Chr -bp_g {config[gwas_chr_label]} -bp_w {kg_bp_label} -ref_g {config[gwas_ref_label]} -ref_w A1 -alt_g {config[gwas_alt_label]} -alt_w A2 -of {{output}} -nt {{threads}}"
 
 rule join_maf_to_gwas_and_weights:
     input:
@@ -253,4 +253,4 @@ rule join_maf_to_gwas_and_weights:
      "results/{imd_a}_{imd_b}/gwas/{imd_a}_{imd_b}_with_weights_and_maf.tsv.gz"
     threads: 4
     shell:
-        "Rscript scripts/join_maf_to_gwas_and_weights.R -gf {input.merged_gwas_file} -mf {input.maf_file} -chr_g CHR38 -chr_m CHR -bp_g BP38 -bp_m BP38 -ref_g REF -ref_m A1 -alt_g ALT -alt_m A2 -maf MAF -o {output} -nt {threads}"
+        f"Rscript scripts/join_maf_to_gwas_and_weights.R -gf {{input.merged_gwas_file}} -mf {{input.maf_file}} -chr_g {config[gwas_chr_label]} -chr_m CHR -bp_g {config[gwas_bp_label]} -bp_m {kg_bp_label} -ref_g {config[gwas_ref_label]} -ref_m A1 -alt_g {config[gwas_alt_label]} -alt_m A2 -maf MAF -o {{output}} -nt {{threads}}"
