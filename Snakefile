@@ -13,8 +13,10 @@ if not(config["reference"] in ["hg38", "hg19"]):
 
 if config["reference"] == "hg38":
     kg_bp_label = "BP38"
+    checksum_file = "resources/1000g/vcf_gz_hg38.md5sum"
 else:
     kg_bp_label = "BP19"
+    checksum_file = "resources/1000g/vcf_gz_hg19.md5sum"
 
 rule download_1000g_genotype_data:
      output:
@@ -32,6 +34,23 @@ rule download_1000g_genotype_data:
             else:
                 shell("wget -O resources/1000g/{wildcards.chr}.vcf.gz http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.{wildcards.chr}.phase3_shapeit2_mvncall_integrated_v5b.20130502.genotypes.vcf.gz")
 
+rule md5sum_for_1000g_genotype_data:
+    input:
+        ["resources/1000g/%s.vcf.gz" % x for x in CHROMS],
+        "resources/1000g/chrX.vcf.gz",
+        md5sum_file = "resources/1000g/vcf_gz_{config[reference]}.md5sum"
+    output:
+        temp("resources/1000g/md5sum_check.txt")
+    shell:
+        """
+        md5sum -c {input.md5sum_file} >>{output}
+        if grep -q "FAILED" {output}; then
+           exit 1
+        else
+           exit 0
+        fi
+        """
+
 rule download_1000g_sample_metadata:
      output:
       "resources/1000g/20130606_g1k_3202_samples_ped_population.txt"
@@ -40,7 +59,8 @@ rule download_1000g_sample_metadata:
 
 rule vcf_to_bed:
      input:
-      "resources/1000g/{chr}.vcf.gz"
+      "resources/1000g/{chr}.vcf.gz",
+      "resources/1000g/md5sum_check.txt"
      output:
       "resources/1000g/{chr}.bed",
       "resources/1000g/{chr}.bim",
