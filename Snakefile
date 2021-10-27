@@ -38,7 +38,7 @@ rule md5sum_for_1000g_genotype_data:
     input:
         ["resources/1000g/%s.vcf.gz" % x for x in CHROMS],
         "resources/1000g/chrX.vcf.gz",
-        md5sum_file = "resources/1000g/vcf_gz_%s.md5sum" % config["reference"]
+        md5sum_file = checksum_file
     output:
         temp("resources/1000g/md5sum_check.txt")
     shell:
