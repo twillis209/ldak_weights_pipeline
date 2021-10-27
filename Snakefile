@@ -122,6 +122,10 @@ rule combine_maf_files:
         """
         echo -e "CHR SNP A1 A2 MAF NCHROBS" >>{output}
         for x in {input}; do tail -n +2 $x >>{output}; done
+        # Strip leading whitespace inserted by plink
+        sed -i 's/^[[:blank:]]\+//' {output}
+        # Condense separator whitespace
+        sed -i 's/[[:blank:]]\+/ /g' {output}
         """
 
 rule add_bp_to_maf_file:
@@ -129,12 +133,18 @@ rule add_bp_to_maf_file:
         maf_file = "resources/1000g/euro/qc/maf/chr_all.frq",
         bim_file = "resources/1000g/euro/qc/chr_all.bim"
     output:
-        "resources/1000g/euro/qc/maf/chr_all_bp.frq"
+        tmp_bim_file = temp("resources/1000g/euro/qc/maf/chr_all.tmp"),
+        maf_file = "resources/1000g/euro/qc/maf/chr_all_bp.frq"
     threads: 4
     resources:
         mem_mb=get_mem_mb
     shell:
-        "Rscript scripts/add_bp_to_maf_file.R -mf {input.maf_file} -bf {input.bim_file} -chr_m CHR -chr_b Chr -bp_b {kg_bp_label} -ref_m A1 -alt_m A2 -ref_b A1 -alt_b A2 -id_m SNP -id_b ID -maf MAF -of {output} -nt {threads}"
+        """
+        echo -e "CHR\tSNP\tCm\t{kg_bp_label}\tA1\tA2" >>{output.tmp_bim_file}
+        cat {input.bim_file} >>{output.tmp_bim_file}
+        sed -i 's/\t/ /g' {output.tmp_bim_file}
+        paste -d' ' {input.maf_file} <(cut -d' ' -f4 {output.tmp_bim_file}) | awk -F' ' '{{print $1" "$7" "$2" "$3" "$4" "$5" "$6}}' >>{output.maf_file}
+        """
 
 rule join_gwas:
      input:
