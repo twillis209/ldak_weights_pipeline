@@ -276,6 +276,7 @@ rule join_gwas_and_weights:
     shell:
         "Rscript scripts/join_gwas_and_weights.R -gf {input.merged_gwas_file} -wf {input.weights_file} -chr_g {config[gwas_chr_label]} -chr_w Chr -bp_g {config[gwas_chr_label]} -bp_w {kg_bp_label} -ref_g {config[gwas_ref_label]} -ref_w A1 -alt_g {config[gwas_alt_label]} -alt_w A2 -of {output} -nt {threads}"
 
+# TODO allow user to supply their own maf values
 rule join_maf_to_gwas_and_weights:
     input:
      merged_gwas_file = "results/{imd_a}_{imd_b}/gwas/{imd_a}_{imd_b}_with_weights.tsv.gz",
@@ -285,3 +286,7 @@ rule join_maf_to_gwas_and_weights:
     threads: 4
     shell:
         "Rscript scripts/join_maf_to_gwas_and_weights.R -gf {input.merged_gwas_file} -mf {input.maf_file} -chr_g {config[gwas_chr_label]} -chr_m CHR -bp_g {config[gwas_bp_label]} -bp_m {kg_bp_label} -ref_g {config[gwas_ref_label]} -ref_m A1 -alt_g {config[gwas_alt_label]} -alt_m A2 -maf MAF -o {output} -nt {threads}"
+
+rule run_fcfdr:
+    input:
+     "results/{imd_a}_{imd_b}/gwas/{imd_a}_{imd_b}_with_weights_and_maf.tsv.gz"
